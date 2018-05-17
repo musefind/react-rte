@@ -1,43 +1,80 @@
 /* @flow */
-import React, {Component} from 'react';
-import RichTextEditor, {createEmptyValue} from './RichTextEditor';
-import {convertToRaw} from 'draft-js';
+import React, { Component } from 'react';
+import RichTextEditor, { createEmptyValue } from './RichTextEditor';
+import { convertToRaw, CompositeDecorator } from 'draft-js';
 import autobind from 'class-autobind';
 
 import ButtonGroup from './ui/ButtonGroup';
 import Dropdown from './ui/Dropdown';
 import IconButton from './ui/IconButton';
 
-import type {EditorValue} from './RichTextEditor';
+import type { EditorValue } from './RichTextEditor';
 
 type Props = {};
 type State = {
-  value: EditorValue;
-  format: string;
-  readOnly: boolean;
+  value: EditorValue,
+  format: string,
+  readOnly: boolean
 };
 
 export default class EditorDemo extends Component {
   props: Props;
   state: State;
 
+  compositeDecorator = new CompositeDecorator([
+    {
+      strategy: this.handleStrategy.bind(this),
+      component: this.HandleSpan
+    }
+  ]);
+
+  handleStrategy(contentBlock, callback, contentState) {
+    const HANDLE_REGEX = /{{\w+}}/g;
+    this.findWithRegex(HANDLE_REGEX, contentBlock, callback);
+  }
+
+  HandleSpan(props) {
+    return (
+      <span style={styles.handle} data-offset-key={props.offsetKey}>
+        <b>{props.children}</b>
+      </span>
+    );
+  }
+  findWithRegex(regex, contentBlock, callback) {
+    const text = contentBlock.getText();
+    let matchArr;
+    let start;
+    console.log(text);
+    while ((matchArr = regex.exec(text)) !== null) {
+      start = matchArr.index;
+      console.log(start);
+      callback(start, start + matchArr[0].length);
+    }
+  }
+
   constructor() {
     super(...arguments);
     autobind(this);
     this.state = {
-      value: createEmptyValue(),
+      value: createEmptyValue(this.compositeDecorator),
       format: 'html',
-      readOnly: false,
+      readOnly: false
     };
   }
 
   render() {
-    let {value, format} = this.state;
+    let { value, format } = this.state;
 
     return (
       <div className="editor-demo">
         <div className="row">
-          <p>This is a demo of the <a href="https://github.com/sstur/react-rte" target="top">react-rte</a> editor.</p>
+          <p>
+            This is a demo of the{' '}
+            <a href="https://github.com/sstur/react-rte" target="top">
+              react-rte
+            </a>{' '}
+            editor.
+          </p>
         </div>
         <div className="row">
           <RichTextEditor
@@ -52,16 +89,16 @@ export default class EditorDemo extends Component {
               // eslint-disable-next-line no-unused-vars
               (setValue, getValue, editorState) => {
                 let choices = new Map([
-                  ['1', {label: '1'}],
-                  ['2', {label: '2'}],
-                  ['3', {label: '3'}],
+                  ['1', { label: '1' }],
+                  ['2', { label: '2' }],
+                  ['3', { label: '3' }]
                 ]);
                 return (
-                  <ButtonGroup key={1}>
+                  <ButtonGroup focusOnClick={false} key={1}>
                     <Dropdown
                       choices={choices}
                       selectedKey={getValue('my-control-name')}
-                      onChange={(value) => setValue('my-control-name', value)}
+                      onChange={value => setValue('my-control-name', value)}
                     />
                   </ButtonGroup>
                 );
@@ -73,7 +110,7 @@ export default class EditorDemo extends Component {
                   focusOnClick={false}
                   onClick={() => console.log('You pressed a button')}
                 />
-              </ButtonGroup>,
+              </ButtonGroup>
             ]}
           />
         </div>
@@ -117,8 +154,12 @@ export default class EditorDemo extends Component {
         </div>
         <div className="row btn-row">
           <span className="label">Debugging:</span>
-          <button className="btn" onClick={this._logState}>Log Content State</button>
-          <button className="btn" onClick={this._logStateRaw}>Log Raw</button>
+          <button className="btn" onClick={this._logState}>
+            Log Content State
+          </button>
+          <button className="btn" onClick={this._logStateRaw}>
+            Log Raw
+          </button>
         </div>
       </div>
     );
@@ -126,34 +167,52 @@ export default class EditorDemo extends Component {
 
   _logState() {
     let editorState = this.state.value.getEditorState();
-    let contentState = window.contentState = editorState.getCurrentContent().toJS();
+    let contentState = (window.contentState = editorState
+      .getCurrentContent()
+      .toJS());
     console.log(contentState);
   }
 
   _logStateRaw() {
     let editorState = this.state.value.getEditorState();
     let contentState = editorState.getCurrentContent();
-    let rawContentState = window.rawContentState = convertToRaw(contentState);
+    let rawContentState = (window.rawContentState = convertToRaw(contentState));
     console.log(JSON.stringify(rawContentState));
   }
 
   _onChange(value: EditorValue) {
-    this.setState({value});
+    this.setState({ value });
   }
 
   _onChangeSource(event: Object) {
     let source = event.target.value;
     let oldValue = this.state.value;
     this.setState({
-      value: oldValue.setContentFromString(source, this.state.format),
+      value: oldValue.setContentFromString(source, this.state.format)
     });
   }
 
   _onChangeFormat(event: Object) {
-    this.setState({format: event.target.value});
+    this.setState({ format: event.target.value });
   }
 
   _onChangeReadOnly(event: Object) {
-    this.setState({readOnly: event.target.checked});
+    this.setState({ readOnly: event.target.checked });
   }
 }
+
+const styles = {
+  handle: {
+    color: 'white',
+    direction: 'ltr',
+    unicodeBidi: 'bidi-override',
+    borderRadius: '10px',
+    background: 'red',
+    paddingLeft: '10px',
+    paddingRight: '10px',
+    paddingTop: '1px',
+    paddingBottom: '1px',
+    marginLeft: '2px',
+    marginRight: '2px'
+  }
+};

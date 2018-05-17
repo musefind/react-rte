@@ -1,6 +1,13 @@
 /* @flow */
 import React, {Component} from 'react';
-import {CompositeDecorator, Editor, EditorState, Modifier, RichUtils, Entity} from 'draft-js';
+import {
+  CompositeDecorator,
+  Editor,
+  EditorState,
+  Modifier,
+  RichUtils,
+  Entity,
+} from 'draft-js';
 import getDefaultKeyBinding from 'draft-js/lib/getDefaultKeyBinding';
 import changeBlockDepth from './lib/changeBlockDepth';
 import changeBlockType from './lib/changeBlockType';
@@ -44,24 +51,24 @@ const styleMap = {
 type ChangeHandler = (value: EditorValue) => any;
 
 type Props = {
-  className?: string;
-  toolbarClassName?: string;
-  editorClassName?: string;
-  value: EditorValue;
-  onChange?: ChangeHandler;
-  placeholder?: string;
-  customStyleMap?: {[style: string]: {[key: string]: any}};
-  handleReturn?: (event: Object) => boolean;
-  customControls?: Array<CustomControl>;
-  readOnly?: boolean;
-  disabled?: boolean; // Alias of readOnly
-  toolbarConfig?: ToolbarConfig;
-  blockStyleFn?: (block: ContentBlock) => ?string;
-  autoFocus?: boolean;
-  keyBindingFn?: (event: Object) => ?string;
-  rootStyle?: Object;
-  editorStyle?: Object;
-  toolbarStyle?: Object;
+  className?: string,
+  toolbarClassName?: string,
+  editorClassName?: string,
+  value: EditorValue,
+  onChange?: ChangeHandler,
+  placeholder?: string,
+  customStyleMap?: { [style: string]: { [key: string]: any } },
+  handleReturn?: (event: Object) => boolean,
+  customControls?: Array<CustomControl>,
+  readOnly?: boolean,
+  disabled?: boolean, // Alias of readOnly
+  toolbarConfig?: ToolbarConfig,
+  blockStyleFn?: (block: ContentBlock) => ?string,
+  autoFocus?: boolean,
+  keyBindingFn?: (event: Object) => ?string,
+  rootStyle?: Object,
+  editorStyle?: Object,
+  toolbarStyle?: Object
 };
 
 export default class RichTextEditor extends Component {
@@ -104,14 +111,19 @@ export default class RichTextEditor extends Component {
       ...otherProps // eslint-disable-line comma-dangle
     } = this.props;
     let editorState = value.getEditorState();
-    customStyleMap = customStyleMap ? {...styleMap, ...customStyleMap} : styleMap;
+    customStyleMap = customStyleMap
+      ? {...styleMap, ...customStyleMap}
+      : styleMap;
 
     // If the user changes block type before entering any text, we can either
     // style the placeholder or hide it. Let's just hide it for now.
-    let combinedEditorClassName = cx({
-      [styles.editor]: true,
-      [styles.hidePlaceholder]: this._shouldHidePlaceholder(),
-    }, editorClassName);
+    let combinedEditorClassName = cx(
+      {
+        [styles.editor]: true,
+        [styles.hidePlaceholder]: this._shouldHidePlaceholder(),
+      },
+      editorClassName
+    );
     if (readOnly == null) {
       readOnly = disabled;
     }
@@ -158,7 +170,12 @@ export default class RichTextEditor extends Component {
     let editorState = this.props.value.getEditorState();
     let contentState = editorState.getCurrentContent();
     if (!contentState.hasText()) {
-      if (contentState.getBlockMap().first().getType() !== 'unstyled') {
+      if (
+        contentState
+          .getBlockMap()
+          .first()
+          .getType() !== 'unstyled'
+      ) {
         return true;
       }
     }
@@ -199,7 +216,7 @@ export default class RichTextEditor extends Component {
           newSelection,
           '\n',
           block.getInlineStyleAt(newSelection.getStartOffset()),
-          null,
+          null
         );
         this._onChange(
           EditorState.push(editorState, newContent, 'insert-fragment')
@@ -221,9 +238,10 @@ export default class RichTextEditor extends Component {
       let block = contentState.getBlockForKey(blockKey);
       if (isListItem(block) && block.getLength() === 0) {
         let depth = block.getDepth();
-        let newState = (depth === 0) ?
-          changeBlockType(editorState, blockKey, BLOCK_TYPE.UNSTYLED) :
-          changeBlockDepth(editorState, blockKey, depth - 1);
+        let newState =
+          depth === 0
+            ? changeBlockType(editorState, blockKey, BLOCK_TYPE.UNSTYLED)
+            : changeBlockDepth(editorState, blockKey, depth - 1);
         this._onChange(newState);
         return true;
       }
@@ -307,23 +325,21 @@ export default class RichTextEditor extends Component {
     };
 
     let isInMiddleBlock = (index) => index > 0 && index < blocks.size - 1;
-    let isWithinStartBlockSelection = (offset, index) => (
-      index === 0 && offset > selection.getStartOffset()
-    );
-    let isWithinEndBlockSelection = (offset, index) => (
-      index === blocks.size - 1 && offset < selection.getEndOffset()
-    );
+    let isWithinStartBlockSelection = (offset, index) =>
+      index === 0 && offset > selection.getStartOffset();
+    let isWithinEndBlockSelection = (offset, index) =>
+      index === blocks.size - 1 && offset < selection.getEndOffset();
 
     blocks.toIndexedSeq().forEach((block, index) => {
-      ImageDecorator.strategy(
-        block,
-        (offset) => {
-          if (isWithinStartBlockSelection(offset, index) ||
-              isInMiddleBlock(index) ||
-              isWithinEndBlockSelection(offset, index)) {
-            selectImage(block, offset);
-          }
-        });
+      ImageDecorator.strategy(block, (offset) => {
+        if (
+          isWithinStartBlockSelection(offset, index) ||
+          isInMiddleBlock(index) ||
+          isWithinEndBlockSelection(offset, index)
+        ) {
+          selectImage(block, offset);
+        }
+      });
     });
   }
 
@@ -348,12 +364,19 @@ function defaultBlockStyleFn(block: ContentBlock): string {
 
 const decorator = new CompositeDecorator([LinkDecorator, ImageDecorator]);
 
-function createEmptyValue(): EditorValue {
-  return EditorValue.createEmpty(decorator);
+function createEmptyValue(customDecorator = null): EditorValue {
+  const editorDecorator = customDecorator ? customDecorator : decorator;
+  return EditorValue.createEmpty(editorDecorator);
 }
 
-function createValueFromString(markup: string, format: string, options?: ImportOptions): EditorValue {
-  return EditorValue.createFromString(markup, format, decorator, options);
+function createValueFromString(
+  markup: string,
+  format: string,
+  customDecorator,
+  options?: ImportOptions
+): EditorValue {
+  const editorDecorator = customDecorator ? customDecorator : decorator;
+  return EditorValue.createFromString(markup, format, editorDecorator, options);
 }
 
 // $FlowIssue - This should probably not be done this way.
